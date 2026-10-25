@@ -1,0 +1,30 @@
+# keystone routes OpenAI-shaped requests to whichever provider you
+# point it at, with fallback chains and usage accounting.
+listen: :8080
+
+# Client keys accepted by the gateway (Authorization: Bearer <key>).
+# Empty list = auth disabled, for local development only.
+api_keys:
+  - sk-local-dev-1
+
+upstreams:
+  - name: local
+    provider: openai            # Ollama's OpenAI-compatible endpoint
+    base_url: http://localhost:11434/v1
+
+  - name: openai
+    provider: openai
+    api_key_env: OPENAI_API_KEY
+
+  - name: anthropic
+    provider: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+
+# model -> ordered upstream chain; the first healthy one wins.
+routes:
+  "qwen2.5-coder:7b": [local]
+  "gpt-4o": [openai, local]
+  "claude-sonnet-4-5": [anthropic, openai]
+
+rate_limit:
+  requests_per_minute: 120      # per api key; 0 disables
